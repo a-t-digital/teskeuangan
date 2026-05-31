@@ -30,6 +30,23 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 dark:bg-slate-900 dark:text-slate-100">
 
+    <!-- GLOBAL APPS POPUP MODAL (REPLACING BROWSER ALERT/CONFIRM/PROMPT) -->
+    <div id="global-popup-modal" class="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6 text-slate-800">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-5 text-center border border-slate-100 dark:border-slate-700">
+            <h3 id="popup-title" class="text-xl font-bold dark:text-white">Notifikasi</h3>
+            <p id="popup-msg" class="text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-pre-line"></p>
+            
+            <div id="popup-input-wrapper" class="hidden pt-2">
+                <input type="text" id="popup-input" class="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl outline-none text-center text-lg font-bold border dark:border-slate-700 dark:text-white text-blue-600">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button id="popup-cancel-btn" class="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-bold py-4 rounded-2xl text-xs uppercase shadow-sm active:scale-95 transition-all">Batal</button>
+                <button id="popup-ok-btn" class="bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="manage-cat-modal" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6 text-slate-800">
         <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl space-y-4">
             <h3 id="manage-modal-title" class="text-xl font-bold dark:text-white text-center">Kelola Kategori</h3>
@@ -175,7 +192,7 @@
                 </button>
             </form>
             <div class="text-center pt-4 border-t dark:border-slate-700">
-                <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                <p class="text class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
                     <span id="switchPrompt">Belum punya akun?</span>
                     <button type="button" onclick="toggleAuthMode()" id="switchAuthBtn" class="text-blue-600 underline">Daftar sekarang</button>
                 </p>
@@ -388,6 +405,85 @@
         let currentType = 'expense';
         let currentAuthMode = 'login';
 
+        // --- GLOBAL ASYNC POPUP INTERFACE FUNCTIONS ---
+        function appAlert(msg, title = "Notifikasi") {
+            return new Promise((resolve) => {
+                document.getElementById('popup-title').innerText = title;
+                document.getElementById('popup-msg').innerText = msg;
+                document.getElementById('popup-msg').classList.remove('hidden');
+                document.getElementById('popup-input-wrapper').classList.add('hidden');
+                document.getElementById('popup-cancel-btn').classList.add('hidden');
+                
+                const okBtn = document.getElementById('popup-ok-btn');
+                okBtn.className = "col-span-2 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase";
+                
+                const modal = document.getElementById('global-popup-modal');
+                modal.classList.remove('hidden');
+                
+                okBtn.onclick = () => { modal.classList.add('hidden'); resolve(); };
+            });
+        }
+
+        function appConfirm(msg, title = "Konfirmasi") {
+            return new Promise((resolve) => {
+                document.getElementById('popup-title').innerText = title;
+                document.getElementById('popup-msg').innerText = msg;
+                document.getElementById('popup-msg').classList.remove('hidden');
+                document.getElementById('popup-input-wrapper').classList.add('hidden');
+                
+                const cancelBtn = document.getElementById('popup-cancel-btn');
+                cancelBtn.classList.remove('hidden');
+                cancelBtn.className = "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-bold py-4 rounded-2xl text-xs uppercase shadow-sm active:scale-95 transition-all";
+                
+                const okBtn = document.getElementById('popup-ok-btn');
+                okBtn.className = "bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase";
+                
+                const modal = document.getElementById('global-popup-modal');
+                modal.classList.remove('hidden');
+                
+                okBtn.onclick = () => { modal.classList.add('hidden'); resolve(true); };
+                cancelBtn.onclick = () => { modal.classList.add('hidden'); resolve(false); };
+            });
+        }
+
+        function appPrompt(msg, defaultVal = '', isNumeric = false) {
+            return new Promise((resolve) => {
+                document.getElementById('popup-title').innerText = msg;
+                document.getElementById('popup-msg').classList.add('hidden');
+                
+                const inputWrapper = document.getElementById('popup-input-wrapper');
+                inputWrapper.classList.remove('hidden');
+                
+                const input = document.getElementById('popup-input');
+                input.value = defaultVal;
+                
+                // Real-time custom auto currency formatter inside popup prompt if flagged
+                input.oninput = null;
+                if (isNumeric) {
+                    input.oninput = function() {
+                        let v = this.value.replace(/\D/g, '');
+                        this.value = v ? new Intl.NumberFormat('id-ID').format(v) : '';
+                    };
+                    // Format initial value if exist
+                    if(defaultVal) input.value = new Intl.NumberFormat('id-ID').format(defaultVal.toString().replace(/\D/g, ''));
+                }
+
+                const cancelBtn = document.getElementById('popup-cancel-btn');
+                cancelBtn.classList.remove('hidden');
+                cancelBtn.className = "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 font-bold py-4 rounded-2xl text-xs uppercase shadow-sm active:scale-95 transition-all";
+                
+                const okBtn = document.getElementById('popup-ok-btn');
+                okBtn.className = "bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase";
+                
+                const modal = document.getElementById('global-popup-modal');
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 50);
+
+                okBtn.onclick = () => { const val = input.value; modal.classList.add('hidden'); resolve(val); };
+                cancelBtn.onclick = () => { modal.classList.add('hidden'); resolve(null); };
+            });
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             if (typeof lucide !== 'undefined') lucide.createIcons();
             updateCategoryOptions();
@@ -470,7 +566,6 @@
         }
         function toggleDarkMode() { db.settings.darkMode = !db.settings.darkMode; save(); applyTheme(); }
 
-        // --- HIDE BALANCE FEATURE ---
         function toggleBalanceVisibility() {
             db.settings.hideBalance = !db.settings.hideBalance;
             save();
@@ -529,18 +624,19 @@
         }
         function closeManageCatModal() { document.getElementById('manage-cat-modal').classList.add('hidden'); }
 
-        function actionAddCategory() {
+        async function actionAddCategory() {
             const n = document.getElementById('m-edit-cat-name').value.trim(), sl = document.getElementById('m-edit-sub-list').value.trim(), g = document.getElementById('m-edit-group').value;
-            if(!n || !sl) return alert("Lengkapi Nama dan Daftar Item!");
+            if(!n || !sl) return appAlert("Lengkapi Nama dan Daftar Item!");
             const subs = sl.split(',').map(s => s.trim()).filter(s => s !== "");
-            if(currentType === 'expense') { if(db.customCategories[g].includes(n)) return alert("Ada!"); db.customCategories[g].push(n); }
-            else { if(db.incomeCategories.includes(n)) return alert("Ada!"); db.incomeCategories.push(n); }
+            if(currentType === 'expense') { if(db.customCategories[g].includes(n)) return appAlert("Kategori sudah terdaftar!"); db.customCategories[g].push(n); }
+            else { if(db.incomeCategories.includes(n)) return appAlert("Kategori sudah terdaftar!"); db.incomeCategories.push(n); }
             db.subCategories[n] = subs; save(); updateCategoryOptions(); document.getElementById('cat').value = n; updateSubOptions(); closeManageCatModal();
         }
 
-        function actionDeleteCategory() {
+        async function actionDeleteCategory() {
             const targetCat = document.getElementById('cat').value; if(!targetCat) return;
-            if(!confirm(`Hapus kategori "${targetCat}"?`)) return;
+            const confirmDel = await appConfirm(`Hapus kategori "${targetCat}"?`);
+            if(!confirmDel) return;
             if(db.incomeCategories.includes(targetCat)) db.incomeCategories = db.incomeCategories.filter(x => x !== targetCat);
             else { for(let g in db.customCategories) db.customCategories[g] = db.customCategories[g].filter(x => x !== targetCat); }
             if(db.subCategories[targetCat]) delete db.subCategories[targetCat];
@@ -581,10 +677,10 @@
             updateCategoryOptions();
         }
 
-        document.getElementById('txForm').addEventListener('submit', (e) => {
+        document.getElementById('txForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const amt = parseInt(document.getElementById('amt').value.replace(/\D/g, '')), cat = document.getElementById('cat').value;
-            if(!amt) return alert("Masukkan nominal!");
+            if(!amt) { await appAlert("Masukkan nominal transaksi!"); return; }
             let g = 'Pemasukan'; if(currentType === 'expense') { for(let k in db.customCategories) if(db.customCategories[k].includes(cat)) g = k; }
             db.txs.push({ id: Date.now(), type: currentType, amount: amt, group: g, category: cat, subcat: document.getElementById('subcat').value, date: new Date().toLocaleDateString('id-ID') });
             save(); updateUI(); document.getElementById('txForm').reset(); setType(currentType);
@@ -636,8 +732,9 @@
             const n = document.getElementById('gName').value, t = parseInt(document.getElementById('gTarget').value.replace(/\D/g, '')); 
             if(n && t > 0) { db.goals.push({ id: Date.now(), name: n, target: t, saved: 0, targetHistory: [] }); save(); renderGoals(); } 
         }
-        function saveToGoal(id) { 
-            let v = parseInt((prompt("Nominal:") || "").replace(/\D/g, '')); 
+        async function saveToGoal(id) { 
+            let pVal = await appPrompt("Nominal Tabungan:", "", true); 
+            let v = parseInt((pVal || "").replace(/\D/g, '')); 
             if(v > 0) { 
                 let g = db.goals.find(x => x.id === id); if(!g.targetHistory) g.targetHistory = [];
                 g.targetHistory.push({ id: Date.now(), amount: v, date: new Date().toLocaleDateString('id-ID') });
@@ -672,8 +769,10 @@
             const n = document.getElementById('m-edit-goal-name').value.trim(), t = parseInt(document.getElementById('m-edit-goal-target').value.replace(/\D/g, ''));
             let g = db.goals.find(x => x.id === currentMGoalId); if(g) { g.name = n; g.target = t; save(); renderGoals(); document.getElementById('manage-goal-modal').classList.add('hidden'); }
         }
-        function actionDeleteGoal() {
-            if(!currentMGoalId || !confirm("Hapus?")) return;
+        async function actionDeleteGoal() {
+            if(!currentMGoalId) return;
+            const confirmDel = await appConfirm("Hapus target impian ini?");
+            if(!confirmDel) return;
             db.goals = db.goals.filter(x => x.id !== currentMGoalId); save(); renderGoals(); document.getElementById('manage-goal-modal').classList.add('hidden');
         }
 
@@ -698,17 +797,31 @@
             }); lucide.createIcons();
         }
 
-        function payDebtStep(id) {
-            let v = parseInt((prompt("Nominal:") || "").replace(/\D/g, ''));
+        async function payDebtStep(id) {
+            let pVal = await appPrompt("Nominal Pembayaran:", "", true);
+            let v = parseInt((pVal || "").replace(/\D/g, ''));
             if(v > 0) {
                 let d = db.debts.find(x => x.id === id); if(!d.payments) d.payments = [];
                 d.payments.push({ id: Date.now(), amount: v, date: new Date().toLocaleDateString('id-ID') });
-                if(d.payments.reduce((s,p)=>s+p.amount,0) >= d.amount && confirm('Lunas! Hapus?')) db.debts = db.debts.filter(x => x.id !== id);
+                if(d.payments.reduce((s,p)=>s+p.amount,0) >= d.amount) {
+                    const confirmClean = await appConfirm('Pembayaran Lunas! Hapus buku catatan ini?');
+                    if(confirmClean) db.debts = db.debts.filter(x => x.id !== id);
+                }
                 save(); renderDebts(); updateUI();
             }
         }
-        function editDebt(id) { let d = db.debts.find(x => x.id === id); let n = prompt("Nama:", d.person), a = prompt("Nominal:", d.amount); if(n) d.person = n; if(a) d.amount = parseInt(a.replace(/\D/g, '')); save(); renderDebts(); updateUI(); }
-        function deleteDebt(id) { if(confirm('Hapus?')) { db.debts = db.debts.filter(x => x.id !== id); save(); renderDebts(); updateUI(); } }
+        async function editDebt(id) { 
+            let d = db.debts.find(x => x.id === id); 
+            let n = await appPrompt("Ubah Nama Orang:", d.person, false); 
+            let a = await appPrompt("Ubah Nominal Pinjaman:", d.amount, true); 
+            if(n) d.person = n; 
+            if(a) d.amount = parseInt(a.replace(/\D/g, '')); 
+            save(); renderDebts(); updateUI(); 
+        }
+        async function deleteDebt(id) { 
+            const confirmDel = await appConfirm('Hapus buku catatan hutang ini?');
+            if(confirmDel) { db.debts = db.debts.filter(x => x.id !== id); save(); renderDebts(); updateUI(); } 
+        }
 
         // --- AUTH ---
         function setAuthMode(mode) {
@@ -729,34 +842,49 @@
                 const result = await response.json();
                 if (result.status === 'success') {
                     if (currentAuthMode === 'login') { db.profile = { name: result.user.name, email: result.user.email, pass: password, isLoggedIn: true }; if (result.data) { if (result.data.txs) db.txs = result.data.txs; if (result.data.goals) db.goals = result.data.goals; if (result.data.debts) db.debts = result.data.debts; } save(); updateUI(); switchTab('input'); }
-                    else { alert(result.message); toggleAuthMode(); }
-                } else alert(result.message);
+                    else { await appAlert(result.message); toggleAuthMode(); }
+                } else await appAlert(result.message);
             } catch (error) { db.profile = { name: email.split('@')[0], email: email, pass: password, isLoggedIn: true }; save(); updateUI(); switchTab('input'); }
             finally { btn.disabled = false; loader.classList.add('hidden'); }
         });
-        function handleLogout() { if (confirm('Keluar?')) { db.profile = { name: '', email: '', pass: '', isLoggedIn: false }; db.txs = []; db.goals = []; db.debts = []; save(); location.reload(); }}
+        async function handleLogout() { 
+            const confirmOut = await appConfirm('Apakah Anda yakin ingin keluar dari akun?');
+            if (confirmOut) { db.profile = { name: '', email: '', pass: '', isLoggedIn: false }; db.txs = []; db.goals = []; db.debts = []; save(); location.reload(); }
+        }
 
         // --- OTHER MODAL ACTIONS ---
         let currentDetailId = null;
         function openTxDetail(id) { const tx = db.txs.find(t => t.id === id); if (!tx) return; currentDetailId = id; document.getElementById('dtl-amt').value = new Intl.NumberFormat('id-ID').format(tx.amount); document.getElementById('dtl-subcat').value = tx.subcat; document.getElementById('dtl-date').value = tx.date; document.getElementById('tx-detail-modal').classList.remove('hidden'); }
         function closeTxDetail() { document.getElementById('tx-detail-modal').classList.add('hidden'); }
         function saveTxDetail() { if (!currentDetailId) return; const tx = db.txs.find(t => t.id === currentDetailId); tx.amount = parseInt(document.getElementById('dtl-amt').value.replace(/\D/g, '')); tx.subcat = document.getElementById('dtl-subcat').value; tx.date = document.getElementById('dtl-date').value; save(); renderHistory(); updateUI(); closeTxDetail(); }
-        function deleteTxDetail() { if (confirm("Hapus?")) { db.txs = db.txs.filter(x => x.id !== currentDetailId); save(); renderHistory(); updateUI(); closeTxDetail(); } }
+        async function deleteTxDetail() { 
+            const confirmDel = await appConfirm("Hapus riwayat transaksi ini?");
+            if (confirmDel) { db.txs = db.txs.filter(x => x.id !== currentDetailId); save(); renderHistory(); updateUI(); closeTxDetail(); } 
+        }
 
         let curGId = null, curGHId = null;
         function openGoalHistoryDetail(gid, hid) { const g = db.goals.find(x => x.id === gid), h = g.targetHistory.find(x => x.id === hid); curGId = gid; curGHId = hid; document.getElementById('dtl-goal-amt').value = new Intl.NumberFormat('id-ID').format(h.amount); document.getElementById('dtl-goal-date').value = h.date; document.getElementById('goal-detail-modal').classList.remove('hidden'); }
         function closeGoalHistoryDetail() { document.getElementById('goal-detail-modal').classList.add('hidden'); }
         function saveGoalHistoryDetail() { const g = db.goals.find(x => x.id === curGId), h = g.targetHistory.find(x => x.id === curGHId); h.amount = parseInt(document.getElementById('dtl-goal-amt').value.replace(/\D/g, '')); h.date = document.getElementById('dtl-goal-date').value; g.saved = g.targetHistory.reduce((s,p)=>s+p.amount,0); save(); renderGoals(); closeGoalHistoryDetail(); }
-        function deleteGoalHistoryDetail() { if(confirm("Hapus?")) { const g = db.goals.find(x => x.id === curGId); g.targetHistory = g.targetHistory.filter(x => x.id !== curGHId); g.saved = g.targetHistory.reduce((s,p)=>s+p.amount,0); save(); renderGoals(); closeGoalHistoryDetail(); } }
+        async function deleteGoalHistoryDetail() { 
+            const confirmDel = await appConfirm("Hapus riwayat setoran tabungan ini?");
+            if(confirmDel) { const g = db.goals.find(x => x.id === curGId); g.targetHistory = g.targetHistory.filter(x => x.id !== curGHId); g.saved = g.targetHistory.reduce((s,p)=>s+p.amount,0); save(); renderGoals(); closeGoalHistoryDetail(); } 
+        }
 
         let curDId = null, curDPId = null;
         function openDebtHistoryDetail(did, pid) { const d = db.debts.find(x => x.id === did), p = d.payments.find(x => x.id === pid); curDId = did; curDPId = pid; document.getElementById('dtl-debt-amt').value = new Intl.NumberFormat('id-ID').format(p.amount); document.getElementById('dtl-debt-date').value = p.date; document.getElementById('debt-detail-modal').classList.remove('hidden'); }
         function closeDebtHistoryDetail() { document.getElementById('debt-detail-modal').classList.add('hidden'); }
         function saveDebtHistoryDetail() { const d = db.debts.find(x => x.id === curDId), p = d.payments.find(x => x.id === curDPId); p.amount = parseInt(document.getElementById('dtl-debt-amt').value.replace(/\D/g, '')); p.date = document.getElementById('dtl-debt-date').value; save(); renderDebts(); updateUI(); closeDebtHistoryDetail(); }
-        function deleteDebtHistoryDetail() { if(confirm("Hapus?")) { const d = db.debts.find(x => x.id === curDId); d.payments = d.payments.filter(x => x.id !== curDPId); save(); renderDebts(); updateUI(); closeDebtHistoryDetail(); } }
+        async function deleteDebtHistoryDetail() { 
+            const confirmDel = await appConfirm("Hapus riwayat riet pembayaran ini?");
+            if(confirmDel) { const d = db.debts.find(x => x.id === curDId); d.payments = d.payments.filter(x => x.id !== curDPId); save(); renderDebts(); updateUI(); closeDebtHistoryDetail(); } 
+        }
 
         function parseLocalDateString(s) { const p = s.split('/'); return new Date(p[2], p[1]-1, p[0]); }
-        function clearAllData() { if(confirm('Reset?')) { localStorage.clear(); location.reload(); } }
+        async function clearAllData() { 
+            const confirmReset = await appConfirm('Apakah Anda yakin ingin mereset database? Semua data di aplikasi akan dihapus permanen.');
+            if(confirmReset) { localStorage.clear(); location.reload(); } 
+        }
     </script>
 </body>
 </html>
